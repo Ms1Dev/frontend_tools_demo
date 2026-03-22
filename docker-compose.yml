@@ -16,6 +16,8 @@ services:
   web:
     build: .
     command: sh -c "python manage.py migrate --no-input && gunicorn demo.wsgi:application --bind 0.0.0.0:8000 --worker-class gthread --workers 1 --threads 10 --timeout 0 --reload"
+    env_file:
+      - .env
     volumes:
       - .:/app
     ports:

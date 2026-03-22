@@ -65,4 +65,4 @@ This is a proof of concept. Before using it as a base for anything real:
 
 **The event queue is in-memory.** Tool call events are lost on server restart and won't work across multiple processes. Replace the queue in `relay/events.py` with Redis pub/sub for production.
 
-**The model is configurable.** Set `OPENAI_MODEL` in your environment. Defaults to `gpt-4o-mini`. More capable models handle parallel and sequential tool calls more reliably.
+**The model is configurable.** Set `OPENAI_MODEL` in your environment. Defaults to `gpt-4o-mini`. Its recommended to use more capable models as they handle parallel and sequential tool calls more reliably.
