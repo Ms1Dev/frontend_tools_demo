@@ -1,11 +1,10 @@
 import json
-import time
 
-from django.http import JsonResponse, StreamingHttpResponse
+from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
 
-from .models import Task
+from .models import Task, Conversation, Message
 
 
 def index(request):
@@ -61,22 +60,21 @@ def task_reorder(request):
     return JsonResponse({'ok': True})
 
 
-def chat_stream(request):
-    if request.method == 'POST':
-        data = json.loads(request.body)
-        message = data.get('message', '')
-    else:
-        message = request.GET.get('message', '')
+def conversation_list(request):
+    convos = list(Conversation.objects.values('id', 'title'))
+    return JsonResponse({'conversations': convos})
 
-    def event_stream(msg):
-        words = msg.split()
-        for i, word in enumerate(words):
-            chunk = word + ('' if i == len(words) - 1 else ' ')
-            yield f"data: {json.dumps({'text': chunk})}\n\n"
-            time.sleep(0.05)
-        yield "data: [DONE]\n\n"
 
-    response = StreamingHttpResponse(event_stream(message), content_type='text/event-stream')
-    response['X-Accel-Buffering'] = 'no'
-    response['Cache-Control'] = 'no-cache'
-    return response
+@require_http_methods(['POST'])
+def conversation_create(request):
+    convo = Conversation.objects.create()
+    return JsonResponse({'id': convo.id, 'title': convo.title})
+
+
+def conversation_messages(request, convo_id):
+    try:
+        convo = Conversation.objects.get(id=convo_id)
+    except Conversation.DoesNotExist:
+        return JsonResponse({'error': 'Not found'}, status=404)
+    messages = list(convo.messages.values('id', 'role', 'content'))
+    return JsonResponse({'messages': messages, 'title': convo.title})

@@ -108,7 +108,63 @@
 
     .task-actions { display: flex; gap: 2px; flex-shrink: 0; }
 
-    /* ── Chat ──────────────────────────────── */
+    /* ── Chat panel ────────────────────────── */
+    .chat-panel {
+      flex: 1.5;
+      flex-direction: row;
+      gap: 0;
+    }
+
+    /* ── Conversations sidebar ─────────────── */
+    .convos-sidebar {
+      width: 168px;
+      border-right: 1px solid #e5e7eb;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .convos-header {
+      padding: 14px 12px;
+      border-bottom: 1px solid #e5e7eb;
+      font-size: 13px;
+      font-weight: 600;
+      color: #111827;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .convos-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 4px 0;
+    }
+
+    .convo-item {
+      padding: 8px 12px;
+      font-size: 13px;
+      color: #374151;
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: background 0.1s;
+    }
+
+    .convo-item:hover { background: #f9fafb; }
+    .convo-item.active { background: #eef2ff; color: #4338ca; font-weight: 500; }
+
+    /* ── Main chat area ────────────────────── */
+    .chat-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
     .chat-messages {
       flex: 1;
       overflow-y: auto;
@@ -187,6 +243,17 @@
     }
     .btn-icon:hover { background: #f3f4f6; color: #374151; }
     .btn-icon.danger:hover { background: #fef2f2; color: #ef4444; }
+    .btn-new {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: #6366f1;
+      font-size: 18px;
+      line-height: 1;
+      padding: 0 2px;
+      border-radius: 4px;
+    }
+    .btn-new:hover { background: #eef2ff; }
   </style>
 </head>
 <body>
@@ -205,13 +272,26 @@
   </div>
 
   <!-- ── Chat ──────────────────────────────────── -->
-  <div class="panel">
-    <div class="panel-header">Chat</div>
-    <div class="chat-messages" id="chat-messages"></div>
-    <div class="chat-input-row">
-      <textarea class="chat-input" id="chat-input" placeholder="Type a message…" rows="2"></textarea>
-      <button class="btn btn-primary" id="send-btn" onclick="sendMessage()">Send</button>
+  <div class="panel chat-panel">
+
+    <!-- Conversations sidebar -->
+    <div class="convos-sidebar">
+      <div class="convos-header">
+        Chats
+        <button class="btn-new" title="New chat" onclick="newConversation()">+</button>
+      </div>
+      <div class="convos-list" id="convos-list"></div>
     </div>
+
+    <!-- Main chat -->
+    <div class="chat-main">
+      <div class="chat-messages" id="chat-messages"></div>
+      <div class="chat-input-row">
+        <textarea class="chat-input" id="chat-input" placeholder="Type a message…" rows="2"></textarea>
+        <button class="btn btn-primary" id="send-btn" onclick="sendMessage()">Send</button>
+      </div>
+    </div>
+
   </div>
 
 </div>
@@ -353,6 +433,46 @@ function attachDragEvents(item) {
   });
 }
 
+// ── Conversations ───────────────────────────────────
+let conversations = [];
+let currentConversationId = null;
+
+async function loadConversations() {
+  const data = await api('/api/conversations/');
+  conversations = data.conversations;
+  renderConversations();
+}
+
+function renderConversations() {
+  const list = document.getElementById('convos-list');
+  list.innerHTML = '';
+  conversations.forEach(c => {
+    const item = document.createElement('div');
+    item.className = 'convo-item' + (c.id === currentConversationId ? ' active' : '');
+    item.dataset.id = c.id;
+    item.textContent = c.title;
+    item.title = c.title;
+    item.onclick = () => selectConversation(c.id);
+    list.appendChild(item);
+  });
+}
+
+async function selectConversation(id) {
+  currentConversationId = id;
+  renderConversations();
+  const data = await api(`/api/conversations/${id}/messages/`);
+  const msgs = document.getElementById('chat-messages');
+  msgs.innerHTML = '';
+  data.messages.forEach(m => appendMessage(m.role, m.content));
+}
+
+function newConversation() {
+  currentConversationId = null;
+  document.getElementById('chat-messages').innerHTML = '';
+  renderConversations();
+  document.getElementById('chat-input').focus();
+}
+
 // ── Chat ───────────────────────────────────────────
 function appendMessage(role, text) {
   const div = document.createElement('div');
@@ -381,10 +501,13 @@ async function sendMessage() {
   const assistantDiv = appendMessage('assistant', '');
 
   try {
+    const body = { message };
+    if (currentConversationId) body.conversation_id = currentConversationId;
+
     const response = await fetch('/api/chat/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
-      body: JSON.stringify({ message }),
+      body: JSON.stringify(body),
     });
 
     const reader = response.body.getReader();
@@ -403,9 +526,14 @@ async function sendMessage() {
         const payload = line.slice(6);
         if (payload === '[DONE]') break;
         try {
-          const { text } = JSON.parse(payload);
-          assistantDiv.textContent += text;
-          scrollChat();
+          const data = JSON.parse(payload);
+          if (data.conversation_id) {
+            currentConversationId = data.conversation_id;
+          }
+          if (data.text) {
+            assistantDiv.textContent += data.text;
+            scrollChat();
+          }
         } catch (_) {}
       }
     }
@@ -415,6 +543,7 @@ async function sendMessage() {
 
   btn.disabled = false;
   input.focus();
+  await loadConversations();
 }
 
 document.getElementById('chat-input').addEventListener('keydown', e => {
@@ -426,6 +555,7 @@ document.getElementById('chat-input').addEventListener('keydown', e => {
 
 // ── Init ───────────────────────────────────────────
 loadTasks();
+loadConversations();
 </script>
 </body>
 </html>
