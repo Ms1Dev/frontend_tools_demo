@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tasks</title>
   <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -673,8 +675,34 @@ function initTaskPanel() {
   loadTasks();
 }
 
-document.addEventListener('htmx:afterSwap', (e) => {
+// ── Map ─────────────────────────────────────────────
+let map = null;
+
+function initMap() {
+  map = L.map('map-container').setView([51.505, -0.09], 13);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
+    subdomains: 'abcd',
+    maxZoom: 20,
+  }).addTo(map);
+}
+
+function goToCoordinates(lat, lng, zoom = 14) {
+  if (!map) return;
+  map.flyTo([lat, lng], zoom);
+}
+
+function dropPin(lat, lng, label = '') {
+  if (!map) return;
+  const marker = L.marker([lat, lng]).addTo(map);
+  if (label) marker.bindPopup(label).openPopup();
+  return marker;
+}
+
+document.addEventListener('htmx:afterSwap', () => {
   if (document.getElementById('task-list')) initTaskPanel();
+  if (document.getElementById('map-container')) { map = null; initMap(); }
+  else map = null;
 });
 
 initTaskPanel();
@@ -928,6 +956,26 @@ relay
       dark: { type: 'boolean', description: 'true for dark mode, false for light mode' }
     },
     fn: ({ dark }) => setDark(dark)
+  })
+  .register({
+    name: 'go_to_coordinates',
+    description: 'Pan and zoom the map to a specific location. Switch to the map panel first if needed.',
+    params: {
+      lat:  { type: 'number', description: 'Latitude' },
+      lng:  { type: 'number', description: 'Longitude' },
+      zoom: { type: 'number', description: 'Zoom level 1–19 (default 14)' },
+    },
+    fn: ({ lat, lng, zoom = 14 }) => goToCoordinates(lat, lng, zoom)
+  })
+  .register({
+    name: 'drop_pin',
+    description: 'Drop a marker pin on the map at the given coordinates with an optional label.',
+    params: {
+      lat:   { type: 'number', description: 'Latitude' },
+      lng:   { type: 'number', description: 'Longitude' },
+      label: { type: 'string', description: 'Popup label shown on the pin (optional)' },
+    },
+    fn: ({ lat, lng, label = '' }) => dropPin(lat, lng, label)
   })
   .connect()
 </script>
