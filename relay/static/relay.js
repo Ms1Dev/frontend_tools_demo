@@ -37,6 +37,13 @@ export class Relay {
     return this
   }
 
+  // ─────────────────────────────────────────────────────
+  //
+  // Overcoming the issue that some browsers have of only allowing 6 concurrent SSE connections
+  // by using navigator.locks to ensure only one tab holds the SSE connection and broadcasting to
+  // other tabs via BroadcastChannel.
+  //
+  // ─────────────────────────────────────────────────────
   _startSSE() {
     // navigator.locks ensures only one tab holds the SSE connection
     navigator.locks.request('relay_lock', () => {
@@ -63,6 +70,7 @@ export class Relay {
     this._channel.onmessage = ({ data }) => this._dispatch(data)
   }
 
+  // call the tool function with the arguments
   _dispatch({ tool, args }) {
     this._tools.get(tool)?.fn(args)
   }

@@ -1,10 +1,14 @@
 # LLM Task App Demo
 
-A Django app demonstrating how to give an LLM both server-side tools (database operations) and live browser tools (UI manipulation) within the same conversation, with no special framework — just SSE and a small relay layer.
+A Django app demonstrating how to give an LLM tools that run directly in the browser.
 
-## Overview
+## To run
 
-When the user sends a message, the LLM receives a combined list of tools: some execute on the server (add/delete tasks), others execute in the browser (pan the map, switch panels, log a message). The LLM doesn't know the difference — it calls them all the same way. The relay layer handles routing.
+Make a .env file based off the example and add your openai api key. Run compose:
+
+```
+docker compose up --build
+```
 
 ---
 
@@ -128,16 +132,6 @@ _dispatch({ tool, args }) {
 ```
 
 The `fn` runs in the browser with full access to live page state — dropping a pin, switching a panel, writing to the console.
-
----
-
-## Security model
-
-Tool schemas are request-scoped — they arrive with the chat message and are used for that request only. There is no server-side registry. A user can modify their own schemas in the browser, but this only affects their own LLM session, the same trust boundary as the messages they type. CSRF protection on the chat endpoint prevents cross-site requests.
-
-This is an acceptable model for authenticated single-tenant applications. For stricter requirements, schemas should be defined server-side and never accepted from the client.
-
-In-memory SSE queues are used for simplicity. A production deployment would replace these with Redis pub/sub to survive server restarts and scale across multiple processes.
 
 ---
 

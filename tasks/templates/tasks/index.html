@@ -54,6 +54,7 @@
 
 <script type="module">
 import { api, esc } from '{% static "tasks/utils.js" %}';
+import { Relay } from '/static/relay.js';
 
 // ── Dark mode ───────────────────────────────────────
 function setDark(dark) {
@@ -120,20 +121,16 @@ async function loadTasks() {
 function renderTasks() {
   const list = document.getElementById('task-list');
   list.innerHTML = '';
-  tasks.sort((a, b) => a.order - b.order || a.id - b.id);
   tasks.forEach(task => {
     const item = document.createElement('div');
     item.className = 'task-item';
     item.dataset.id = task.id;
-    item.draggable = true;
     item.innerHTML = `
-      <span class="drag-handle" title="Drag to reorder">⠿</span>
       <span class="task-title">${esc(task.title)}</span>
       <div class="task-actions">
         <button class="btn btn-icon" title="Edit" data-action="edit">✎</button>
         <button class="btn btn-icon danger" title="Delete" data-action="delete">✕</button>
       </div>`;
-    attachDragEvents(item);
     list.appendChild(item);
   });
 }
@@ -165,21 +162,21 @@ function initTaskPanel() {
 }
 
 // ── Map ─────────────────────────────────────────────
-window.map = null;
+let map = null;
 
 function initMap() {
-  window.map = L.map('map-container').setView([51.505, -0.09], 13);
+  map = L.map('map-container').setView([51.505, -0.09], 13);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
     attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
     subdomains: 'abcd',
     maxZoom: 20,
-  }).addTo(window.map);
+  }).addTo(map);
 }
 
 document.addEventListener('htmx:afterSwap', () => {
   if (document.getElementById('task-list')) initTaskPanel();
-  if (document.getElementById('map-container')) { window.map = null; initMap(); }
-  else window.map = null;
+  if (document.getElementById('map-container')) { map = null; initMap(); }
+  else map = null;
 });
 
 initTaskPanel();
@@ -219,56 +216,20 @@ async function deleteTask(id) {
   renderTasks();
 }
 
-// ── Drag & Drop ────────────────────────────────────
-let dragSrcId = null;
 
-function attachDragEvents(item) {
-  item.addEventListener('dragstart', e => {
-    dragSrcId = parseInt(item.dataset.id);
-    e.dataTransfer.effectAllowed = 'move';
-  });
-
-  item.addEventListener('dragover', e => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    document.querySelectorAll('.task-item').forEach(el => el.classList.remove('drag-over'));
-    item.classList.add('drag-over');
-  });
-
-  item.addEventListener('dragleave', () => item.classList.remove('drag-over'));
-
-  item.addEventListener('drop', async e => {
-    e.preventDefault();
-    item.classList.remove('drag-over');
-    const dropId = parseInt(item.dataset.id);
-    if (dragSrcId === dropId) return;
-
-    const srcIdx = tasks.findIndex(t => t.id === dragSrcId);
-    const dstIdx = tasks.findIndex(t => t.id === dropId);
-    const [moved] = tasks.splice(srcIdx, 1);
-    tasks.splice(dstIdx, 0, moved);
-    tasks.forEach((t, i) => t.order = i + 1);
-
-    renderTasks();
-    await api('/api/tasks/reorder/', 'POST', tasks.map(t => ({ id: t.id, order: t.order })));
-  });
-
-  item.addEventListener('dragend', () => {
-    document.querySelectorAll('.task-item').forEach(el => el.classList.remove('drag-over'));
-  });
-}
-
-// ── Relay interface ─────────────────────────────────
-// These functions are called by relay tool callbacks in the module below.
-window.appendToConsole = appendToConsole;
-window.loadTasks = loadTasks;
-window.setDark = setDark;
-
-</script>
-
-<script type="module">
-import { Relay } from '/static/relay.js'
-
+// ── Relay ────────────────────────────────────────────
+//
+// Tools are registered here. On each message, schemas
+// (name, description, params) are sent to the LLM so
+// it knows what it can call. The fn stays in the
+// browser and runs when the LLM calls the tool.
+//
+// When the LLM calls one of these tools it transmits the 
+// name and arguments to the browser using SSE. 
+// The browser receives the event and executes the fn. 
+// (see relay/static/relay.js)
+//
+// ─────────────────────────────────────────────────────
 window._relay = new Relay()
   .registerHtmxTriggers([
     { name: 'swap-to-map',   description: 'Switch the left panel to the map view' },
@@ -300,7 +261,7 @@ window._relay = new Relay()
       lng:  { type: 'number', description: 'Longitude' },
       zoom: { type: 'number', description: 'Zoom level (default 14)' },
     },
-    fn: ({ lat, lng, zoom = 14 }) => window.map?.flyTo([lat, lng], zoom),
+    fn: ({ lat, lng, zoom = 14 }) => map?.flyTo([lat, lng], zoom),
   })
   .register({
     name: 'drop_pin',
@@ -311,12 +272,13 @@ window._relay = new Relay()
       label: { type: 'string', description: 'Popup label shown on the marker (optional)' },
     },
     fn: ({ lat, lng, label = '' }) => {
-      if (!window.map) return
-      const marker = L.marker([lat, lng]).addTo(window.map)
+      if (!map) return
+      const marker = L.marker([lat, lng]).addTo(map)
       if (label) marker.bindPopup(label).openPopup()
-      window.map.flyTo([lat, lng], 14)
+      map.flyTo([lat, lng], 14)
     },
   })
   .connect()
+
 </script>
 {% endblock %}
