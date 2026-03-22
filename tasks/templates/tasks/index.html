@@ -569,16 +569,15 @@ function esc(str) {
 }
 
 // ── Dark mode ───────────────────────────────────────
-function toggleDark() {
-  const dark = document.body.classList.toggle('dark');
+function setDark(dark) {
+  document.body.classList.toggle('dark', dark);
   document.getElementById('dark-toggle').textContent = dark ? '☀' : '☽';
   localStorage.setItem('dark', dark ? '1' : '');
 }
 
-if (localStorage.getItem('dark')) {
-  document.body.classList.add('dark');
-  document.getElementById('dark-toggle').textContent = '☀';
-}
+function toggleDark() { setDark(!document.body.classList.contains('dark')); }
+
+if (localStorage.getItem('dark')) setDark(true);
 
 // ── Console ─────────────────────────────────────────
 let consoleUnread = 0;
@@ -620,23 +619,19 @@ function toggleConsole() {
 }
 
 // ── Minimise task panel ─────────────────────────────
-function toggleMinimise() {
+function setMinimised(minimised) {
   const panel = document.getElementById('task-panel');
   const btn = document.getElementById('minimise-btn');
-  const title = document.getElementById('task-panel-title');
-  const minimised = panel.classList.toggle('minimised');
+  panel.classList.toggle('minimised', minimised);
   btn.textContent = minimised ? '▶' : '◀';
   btn.title = minimised ? 'Expand' : 'Minimise';
-  title.style.display = minimised ? 'none' : '';
+  document.getElementById('task-panel-title').style.display = minimised ? 'none' : '';
   localStorage.setItem('tasks-minimised', minimised ? '1' : '');
 }
 
-if (localStorage.getItem('tasks-minimised')) {
-  document.getElementById('task-panel').classList.add('minimised');
-  document.getElementById('minimise-btn').textContent = '▶';
-  document.getElementById('minimise-btn').title = 'Expand';
-  document.getElementById('task-panel-title').style.display = 'none';
-}
+function toggleMinimise() { setMinimised(!document.getElementById('task-panel').classList.contains('minimised')); }
+
+if (localStorage.getItem('tasks-minimised')) setMinimised(true);
 
 // ── Tasks ──────────────────────────────────────────
 let tasks = [];
@@ -901,6 +896,22 @@ relay
     description: 'Reload the task list from the server so the UI shows the latest tasks. Call this after adding or deleting tasks.',
     params: {},
     fn: async () => { await loadTasks() }
+  })
+  .register({
+    name: 'set_task_panel_minimised',
+    description: 'Minimise or expand the task panel on the left side of the screen.',
+    params: {
+      minimised: { type: 'boolean', description: 'true to minimise the panel, false to expand it' }
+    },
+    fn: ({ minimised }) => setMinimised(minimised)
+  })
+  .register({
+    name: 'set_dark_mode',
+    description: 'Switch the UI between dark and light mode.',
+    params: {
+      dark: { type: 'boolean', description: 'true for dark mode, false for light mode' }
+    },
+    fn: ({ dark }) => setDark(dark)
   })
   .connect()
 </script>
