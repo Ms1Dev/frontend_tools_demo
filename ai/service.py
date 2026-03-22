@@ -19,27 +19,6 @@ def get_client() -> OpenAI:
     return _client
 
 
-def _to_openai(tools: list[dict]) -> list[dict]:
-    return [
-        {
-            "type": "function",
-            "function": {
-                "name": t["name"],
-                "description": t["description"],
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        k: {"type": v["type"], "description": v.get("description", "")}
-                        for k, v in t.get("params", {}).items()
-                    },
-                    "required": list(t.get("params", {}).keys()),
-                },
-            },
-        }
-        for t in tools
-    ]
-
-
 def _execute(name: str, arguments: dict) -> str:
     if name in FRONTEND_TOOL_NAMES:
         publish({"type": "tool_call", "tool": name, "args": arguments})
@@ -62,7 +41,7 @@ def stream_response(history: list[dict]) -> Generator[str, None, str]:
     """
     client = get_client()
     messages = [{"role": "system", "content": SYSTEM_PROMPT}] + list(history)
-    all_tools = TOOLS + _to_openai(FRONTEND_TOOLS)
+    all_tools = TOOLS + FRONTEND_TOOLS
     full_response = []
 
     while True:
