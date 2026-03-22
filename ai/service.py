@@ -46,12 +46,12 @@ def _execute(name: str, arguments: dict, frontend_tool_names: set[str]) -> str:
     return execute_tool(name, arguments)
 
 
-SYSTEM_PROMPT = """You are a helpful assistant with access to a task management app.
+SYSTEM_PROMPT = """You are a helpful assistant with access to a notes app.
 
 When working through a request, use the `log` tool to narrate your thinking — what you're about to do, decisions you're making, and results of actions. Keep log messages short and clear.
 
-To manage tasks use: list_tasks, add_task, delete_task.
-After any add or delete, always call refresh_task_list so the UI updates."""
+To manage notes use: list_notes, add_note, delete_note.
+After any add or delete, always call refresh_note_list so the UI updates."""
 
 
 def stream_response(history: list[dict], frontend_tools: list[dict]) -> Generator[str, None, str]:

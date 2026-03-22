@@ -1,4 +1,4 @@
-# LLM Task App Demo
+# LLM Notes App Demo
 
 A Django app demonstrating how to give an LLM tools that run directly in the browser.
 
@@ -49,7 +49,7 @@ HTMX panel swaps are a common pattern, so the Relay class has a built-in for the
 window._relay = new Relay()
   .registerHtmxTriggers([
     { name: 'swap-to-map',   description: 'Switch the left panel to the map view' },
-    { name: 'swap-to-tasks', description: 'Switch the left panel back to the task list' },
+    { name: 'swap-to-notes', description: 'Switch the left panel back to the note list' },
   ])
   .register({ /* other tools */ })
   .connect()
@@ -104,7 +104,7 @@ def stream_response(history, frontend_tools):
     ...
 ```
 
-`TOOLS` comes from `ai/tools.py` — a plain list of OpenAI function schemas for server-side operations like `add_task`, `delete_task`, and `list_tasks`. The combined list is passed to the OpenAI API. The LLM sees all tools — server and browser — as equivalent.
+`TOOLS` comes from `ai/tools.py` — a plain list of OpenAI function schemas for server-side operations like `add_note`, `delete_note`, and `list_notes`. The combined list is passed to the OpenAI API. The LLM sees all tools — server and browser — as equivalent.
 
 ---
 
@@ -142,13 +142,13 @@ Add a `.register()` call in the relay block of your template. Give it a clear `d
 ```js
 window._relay = new Relay()
   .register({
-    name: 'highlight_task',
+    name: 'highlight_note',
     description: 'Briefly highlight a task in the list to draw attention to it.',
     params: {
-      id: { type: 'number', description: 'The task ID to highlight' },
+      id: { type: 'number', description: 'The note ID to highlight' },
     },
     fn: ({ id }) => {
-      document.querySelector(`.task-item[data-id="${id}"]`)?.classList.add('highlighted')
+      document.querySelector(`.note-item[data-id="${id}"]`)?.classList.add('highlighted')
     },
   })
   .connect()
@@ -169,12 +169,12 @@ TOOLS = [
   {
     "type": "function",
     "function": {
-      "name": "complete_task",
-      "description": "Mark a task as complete",
+      "name": "complete_note",
+      "description": "Mark a note as complete",
       "parameters": {
         "type": "object",
         "properties": {
-          "id": {"type": "integer", "description": "Task ID"},
+          "id": {"type": "integer", "description": "Note ID"},
         },
         "required": ["id"],
       },
@@ -184,9 +184,9 @@ TOOLS = [
 
 def execute_tool(name, arguments):
   ...
-  if name == "complete_task":
-      task = Task.objects.get(id=arguments["id"])
-      task.completed = True
-      task.save()
+  if name == "complete_note":
+      task = Note.objects.get(id=arguments["id"])
+      note.completed = True
+      note.save()
       return json.dumps({"ok": True})
 ```

@@ -3,7 +3,7 @@ import json
 from django.http import StreamingHttpResponse
 from django.views.decorators.http import require_POST
 
-from tasks.models import Conversation, Message
+from notes.models import Conversation, Message
 from .service import stream_response
 
 

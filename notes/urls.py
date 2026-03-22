@@ -3,13 +3,12 @@ from . import views
 
 urlpatterns = [
     path('', views.index, name='index'),
-    path('panels/tasks/', views.panel_tasks, name='panel-tasks'),
+    path('panels/notes/', views.panel_notes, name='panel-notes'),
     path('panels/map/', views.panel_map, name='panel-map'),
-    path('api/tasks/', views.task_list, name='task-list'),
-    path('api/tasks/add/', views.task_add, name='task-add'),
-    path('api/tasks/<int:task_id>/edit/', views.task_edit, name='task-edit'),
-    path('api/tasks/<int:task_id>/delete/', views.task_delete, name='task-delete'),
-    path('api/tasks/reorder/', views.task_reorder, name='task-reorder'),
+    path('api/notes/', views.note_list, name='note-list'),
+    path('api/notes/add/', views.note_add, name='note-add'),
+    path('api/notes/<int:note_id>/edit/', views.note_edit, name='note-edit'),
+    path('api/notes/<int:note_id>/delete/', views.note_delete, name='note-delete'),
     path('api/conversations/', views.conversation_list, name='conversation-list'),
     path('api/conversations/create/', views.conversation_create, name='conversation-create'),
     path('api/conversations/<int:convo_id>/messages/', views.conversation_messages, name='conversation-messages'),

@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('tasks', '0001_initial'),
+        ('notes', '0001_initial'),
     ]
 
     operations = [
@@ -29,7 +29,7 @@ class Migration(migrations.Migration):
                 ('role', models.CharField(max_length=20)),
                 ('content', models.TextField()),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('conversation', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='messages', to='tasks.conversation')),
+                ('conversation', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='messages', to='notes.conversation')),
             ],
             options={
                 'ordering': ['created_at'],

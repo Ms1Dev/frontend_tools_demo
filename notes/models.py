@@ -1,7 +1,7 @@
 from django.db import models
 
 
-class Task(models.Model):
+class Note(models.Model):
     title = models.CharField(max_length=255)
     order = models.IntegerField(default=0)
 
