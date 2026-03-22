@@ -1,17 +1,14 @@
 <div class="panel task-panel" id="task-panel">
   <div class="panel-header">
     <span id="task-panel-title">Tasks</span>
-    <div style="display:flex;gap:6px;align-items:center">
-      <button class="btn-icon" title="Switch to map"
-              hx-get="/panels/map/" hx-target="#task-panel" hx-swap="outerHTML"
-              hx-trigger="click, swap-to-map"
-              data-trigger="swap-to-map">Map</button>
-      <button class="btn-icon" id="minimise-btn" title="Minimise" onclick="toggleMinimise()">◀</button>
-    </div>
+    <button class="btn-icon" title="Switch to map"
+            hx-get="/panels/map/" hx-target="#task-panel" hx-swap="outerHTML"
+            hx-trigger="click, swap-to-map"
+            data-trigger="swap-to-map">Map</button>
   </div>
   <div class="task-add">
     <input type="text" id="new-task-input" placeholder="Add a task…" autocomplete="off">
-    <button class="btn btn-primary" onclick="addTask()">Add</button>
+    <button class="btn btn-primary" id="add-task-btn">Add</button>
   </div>
   <div class="task-list" id="task-list"></div>
 </div>

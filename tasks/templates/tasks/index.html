@@ -1,503 +1,7 @@
+{% extends "tasks/base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tasks</title>
-  <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"></script>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #f0f2f5;
-      height: 100vh;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .topbar {
-      height: 44px;
-      background: #fff;
-      border-bottom: 1px solid #e5e7eb;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 20px;
-      flex-shrink: 0;
-    }
-
-    .topbar-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: #111827;
-    }
-
-    .app {
-      display: flex;
-      gap: 16px;
-      padding: 16px;
-      flex: 1;
-      overflow: hidden;
-    }
-
-    .panel {
-      background: #fff;
-      border-radius: 10px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      flex: 1;
-    }
-
-    .panel-header {
-      padding: 16px 20px;
-      border-bottom: 1px solid #e5e7eb;
-      font-size: 15px;
-      font-weight: 600;
-      color: #111827;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    /* ── Task list ─────────────────────────── */
-    .task-panel {
-      transition: flex 0.3s ease, min-width 0.3s ease;
-      min-width: 0;
-    }
-
-    .task-panel.minimised {
-      flex: 0 0 40px;
-    }
-
-    .task-panel.minimised .task-add,
-    .task-panel.minimised .task-list {
-      display: none;
-    }
-
-    .task-panel.minimised .panel-header {
-      padding: 0;
-      justify-content: center;
-      border-bottom: none;
-      height: 100%;
-      align-items: flex-start;
-      padding-top: 12px;
-    }
-
-    .task-panel.minimised #task-panel-title {
-      display: none;
-    }
-
-    .task-add {
-      display: flex;
-      gap: 8px;
-      padding: 12px 16px;
-      border-bottom: 1px solid #e5e7eb;
-      flex-shrink: 0;
-    }
-
-    .task-add input {
-      flex: 1;
-      padding: 7px 11px;
-      border: 1px solid #d1d5db;
-      border-radius: 6px;
-      font-size: 14px;
-      outline: none;
-      font-family: inherit;
-      background: inherit;
-      color: inherit;
-    }
-
-    .task-add input:focus { border-color: #6366f1; }
-
-    .task-list {
-      flex: 1;
-      overflow-y: auto;
-      padding: 6px 0;
-    }
-
-    .task-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 9px 16px;
-      transition: background 0.1s;
-    }
-
-    .task-item:hover { background: #f9fafb; }
-    .task-item.drag-over { background: #eef2ff; border-top: 2px solid #6366f1; }
-
-    .drag-handle {
-      color: #c4c9d4;
-      cursor: grab;
-      font-size: 16px;
-      line-height: 1;
-      user-select: none;
-      flex-shrink: 0;
-    }
-
-    .drag-handle:active { cursor: grabbing; }
-
-    .task-title {
-      flex: 1;
-      font-size: 14px;
-      color: #374151;
-    }
-
-    .task-title-input {
-      flex: 1;
-      font-size: 14px;
-      padding: 2px 7px;
-      border: 1px solid #6366f1;
-      border-radius: 4px;
-      outline: none;
-      font-family: inherit;
-      background: inherit;
-      color: inherit;
-    }
-
-    .task-actions { display: flex; gap: 2px; flex-shrink: 0; }
-
-    /* ── Chat panel ────────────────────────── */
-    .chat-panel {
-      flex: 1.5;
-      flex-direction: row;
-      gap: 0;
-    }
-
-    /* ── Conversations sidebar ─────────────── */
-    .convos-sidebar {
-      width: 168px;
-      border-right: 1px solid #e5e7eb;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      flex-shrink: 0;
-    }
-
-    .convos-header {
-      padding: 14px 12px;
-      border-bottom: 1px solid #e5e7eb;
-      font-size: 13px;
-      font-weight: 600;
-      color: #111827;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-shrink: 0;
-    }
-
-    .convos-list {
-      flex: 1;
-      overflow-y: auto;
-      padding: 4px 0;
-    }
-
-    .convo-item {
-      padding: 8px 12px;
-      font-size: 13px;
-      color: #374151;
-      cursor: pointer;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      transition: background 0.1s;
-    }
-
-    .convo-item:hover { background: #f9fafb; }
-    .convo-item.active { background: #eef2ff; color: #4338ca; font-weight: 500; }
-
-    /* ── Main chat area ────────────────────── */
-    .chat-main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    .chat-messages {
-      flex: 1;
-      overflow-y: auto;
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .message {
-      max-width: 78%;
-      padding: 9px 13px;
-      border-radius: 12px;
-      font-size: 14px;
-      line-height: 1.55;
-      word-break: break-word;
-      white-space: pre-wrap;
-    }
-
-    .message.user {
-      align-self: flex-end;
-      background: #6366f1;
-      color: #fff;
-      border-bottom-right-radius: 3px;
-    }
-
-    .message.assistant {
-      align-self: flex-start;
-      background: #f3f4f6;
-      color: #111827;
-      border-bottom-left-radius: 3px;
-    }
-
-    .chat-input-row {
-      display: flex;
-      gap: 8px;
-      padding: 12px 16px;
-      border-top: 1px solid #e5e7eb;
-      flex-shrink: 0;
-    }
-
-    .chat-input {
-      flex: 1;
-      padding: 8px 11px;
-      border: 1px solid #d1d5db;
-      border-radius: 6px;
-      font-size: 14px;
-      resize: none;
-      outline: none;
-      font-family: inherit;
-      line-height: 1.4;
-      background: inherit;
-      color: inherit;
-    }
-
-    .chat-input:focus { border-color: #6366f1; }
-
-    /* ── Buttons ───────────────────────────── */
-    .btn {
-      padding: 7px 14px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 13px;
-      font-weight: 500;
-      font-family: inherit;
-      transition: opacity 0.15s, background 0.15s;
-    }
-
-    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
-    .btn-primary { background: #6366f1; color: #fff; }
-    .btn-primary:not(:disabled):hover { background: #4f46e5; }
-    .btn-icon {
-      background: transparent;
-      color: #9ca3af;
-      padding: 4px 6px;
-      border-radius: 5px;
-      border: none;
-      cursor: pointer;
-      font-family: inherit;
-    }
-    .btn-icon:hover { background: #f3f4f6; color: #374151; }
-    .btn-icon.danger:hover { background: #fef2f2; color: #ef4444; }
-    .btn-new {
-      background: transparent;
-      border: none;
-      cursor: pointer;
-      color: #6366f1;
-      font-size: 18px;
-      line-height: 1;
-      padding: 0 2px;
-      border-radius: 4px;
-    }
-    .btn-new:hover { background: #eef2ff; }
-
-    /* ── Dark mode ─────────────────────────── */
-    body.dark {
-      background: #0f1117;
-    }
-
-    body.dark .topbar {
-      background: #1a1d27;
-      border-color: #2e3147;
-    }
-
-    body.dark .topbar-title { color: #e5e7eb; }
-
-    body.dark .panel {
-      background: #1a1d27;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
-    }
-
-    body.dark .panel-header {
-      border-color: #2e3147;
-      color: #e5e7eb;
-    }
-
-    body.dark .task-add {
-      border-color: #2e3147;
-    }
-
-    body.dark .task-add input,
-    body.dark .task-title-input {
-      border-color: #3a3f55;
-      color: #e5e7eb;
-      background: #1a1d27;
-    }
-
-    body.dark .task-add input:focus,
-    body.dark .task-title-input:focus { border-color: #6366f1; }
-
-    body.dark .task-item:hover { background: #22263a; }
-    body.dark .task-item.drag-over { background: #2a2d4a; }
-
-    body.dark .drag-handle { color: #4b5268; }
-
-    body.dark .task-title { color: #d1d5db; }
-
-    body.dark .convos-sidebar { border-color: #2e3147; }
-
-    body.dark .convos-header {
-      border-color: #2e3147;
-      color: #e5e7eb;
-    }
-
-    body.dark .convo-item { color: #9ca3af; }
-    body.dark .convo-item:hover { background: #22263a; }
-    body.dark .convo-item.active { background: #2a2d4a; color: #818cf8; }
-
-    body.dark .message.assistant {
-      background: #22263a;
-      color: #e5e7eb;
-    }
-
-    body.dark .chat-input-row { border-color: #2e3147; }
-
-    body.dark .chat-input {
-      border-color: #3a3f55;
-      color: #e5e7eb;
-      background: #1a1d27;
-    }
-
-    body.dark .chat-input:focus { border-color: #6366f1; }
-
-    body.dark .btn-icon { color: #6b7280; }
-    body.dark .btn-icon:hover { background: #22263a; color: #d1d5db; }
-    body.dark .btn-icon.danger:hover { background: #2d1f1f; color: #f87171; }
-
-    body.dark .btn-new:hover { background: #2a2d4a; }
-
-    /* ── Console panel ──────────────────────────── */
-    .console-panel {
-      background: #1a1d27;
-      border-top: 1px solid #2e3147;
-      flex-shrink: 0;
-      display: flex;
-      flex-direction: column;
-      transition: height 0.25s ease;
-      height: 160px;
-    }
-
-    .console-panel.collapsed {
-      height: 32px;
-    }
-
-    .console-header {
-      height: 32px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 12px;
-      flex-shrink: 0;
-      cursor: pointer;
-      user-select: none;
-    }
-
-    .console-header-left {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 11px;
-      font-weight: 600;
-      color: #6b7280;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-    }
-
-    .console-badge {
-      background: #6366f1;
-      color: #fff;
-      font-size: 10px;
-      font-weight: 700;
-      min-width: 16px;
-      height: 16px;
-      border-radius: 8px;
-      padding: 0 4px;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      line-height: 1;
-    }
-
-    .console-badge.visible { display: flex; }
-
-    .console-toggle {
-      background: transparent;
-      border: none;
-      color: #4b5268;
-      cursor: pointer;
-      font-size: 12px;
-      padding: 2px 4px;
-      border-radius: 3px;
-      line-height: 1;
-    }
-
-    .console-toggle:hover { color: #9ca3af; }
-
-    .console-body {
-      flex: 1;
-      overflow-y: auto;
-      padding: 6px 12px 8px;
-      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-      font-size: 12px;
-      line-height: 1.6;
-    }
-
-    .console-panel.collapsed .console-body { display: none; }
-
-    .console-line {
-      display: flex;
-      gap: 10px;
-      color: #a5b4fc;
-    }
-
-    .console-line .console-ts {
-      color: #4b5268;
-      flex-shrink: 0;
-    }
-
-    .console-line .console-msg { color: #c4c9d4; word-break: break-word; }
-
-    .console-empty {
-      color: #4b5268;
-      font-style: italic;
-    }
-
-    body.dark .console-panel { border-color: #2e3147; }
-  </style>
-</head>
-<body>
-{% csrf_token %}
-
-<div class="topbar">
-  <span class="topbar-title">Tasks App</span>
-  <button class="btn-icon" id="dark-toggle" title="Toggle dark mode" onclick="toggleDark()">☽</button>
-</div>
+{% block content %}
 
 <div class="app">
 
@@ -511,7 +15,7 @@
     <div class="convos-sidebar">
       <div class="convos-header">
         Chats
-        <button class="btn-new" title="New chat" onclick="newConversation()">+</button>
+        <button class="btn-new" id="new-convo-btn" title="New chat">+</button>
       </div>
       <div class="convos-list" id="convos-list"></div>
     </div>
@@ -521,7 +25,7 @@
       <div class="chat-messages" id="chat-messages"></div>
       <div class="chat-input-row">
         <textarea class="chat-input" id="chat-input" placeholder="Type a message…" rows="2"></textarea>
-        <button class="btn btn-primary" id="send-btn" onclick="sendMessage()">Send</button>
+        <button class="btn btn-primary" id="send-btn">Send</button>
       </div>
     </div>
 
@@ -531,7 +35,7 @@
 
 <!-- ── Console ──────────────────────────────────────── -->
 <div class="console-panel collapsed" id="console-panel">
-  <div class="console-header" onclick="toggleConsole()">
+  <div class="console-header" id="console-header">
     <div class="console-header-left">
       <span>LLM Console</span>
       <span class="console-badge" id="console-badge">0</span>
@@ -543,23 +47,13 @@
   </div>
 </div>
 
-<script>
-// ── CSRF ───────────────────────────────────────────
-const CSRF = document.querySelector('[name=csrfmiddlewaretoken]').value;
+{% endblock %}
 
-function api(url, method = 'GET', body = null) {
-  const opts = {
-    method,
-    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
-  };
-  if (body !== null) opts.body = JSON.stringify(body);
-  return fetch(url, opts).then(r => r.json());
-}
+{% block scripts %}
+<script type="module" src="{% static 'tasks/chat.js' %}"></script>
 
-// ── Helpers ────────────────────────────────────────
-function esc(str) {
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
+<script type="module">
+import { api, esc } from '{% static "tasks/utils.js" %}';
 
 // ── Dark mode ───────────────────────────────────────
 function setDark(dark) {
@@ -571,6 +65,7 @@ function setDark(dark) {
 function toggleDark() { setDark(!document.body.classList.contains('dark')); }
 
 if (localStorage.getItem('dark')) setDark(true);
+document.getElementById('dark-toggle').addEventListener('click', toggleDark);
 
 // ── Console ─────────────────────────────────────────
 let consoleUnread = 0;
@@ -611,20 +106,7 @@ function toggleConsole() {
   }
 }
 
-// ── Minimise task panel ─────────────────────────────
-function setMinimised(minimised) {
-  const panel = document.getElementById('task-panel');
-  const btn = document.getElementById('minimise-btn');
-  panel.classList.toggle('minimised', minimised);
-  btn.textContent = minimised ? '▶' : '◀';
-  btn.title = minimised ? 'Expand' : 'Minimise';
-  document.getElementById('task-panel-title').style.display = minimised ? 'none' : '';
-  localStorage.setItem('tasks-minimised', minimised ? '1' : '');
-}
-
-function toggleMinimise() { setMinimised(!document.getElementById('task-panel').classList.contains('minimised')); }
-
-if (localStorage.getItem('tasks-minimised')) setMinimised(true);
+document.getElementById('console-header').addEventListener('click', toggleConsole);
 
 // ── Tasks ──────────────────────────────────────────
 let tasks = [];
@@ -648,8 +130,8 @@ function renderTasks() {
       <span class="drag-handle" title="Drag to reorder">⠿</span>
       <span class="task-title">${esc(task.title)}</span>
       <div class="task-actions">
-        <button class="btn btn-icon" title="Edit" onclick="startEdit(${task.id})">✎</button>
-        <button class="btn btn-icon danger" title="Delete" onclick="deleteTask(${task.id})">✕</button>
+        <button class="btn btn-icon" title="Edit" data-action="edit">✎</button>
+        <button class="btn btn-icon danger" title="Delete" data-action="delete">✕</button>
       </div>`;
     attachDragEvents(item);
     list.appendChild(item);
@@ -671,38 +153,33 @@ function initTaskPanel() {
   const input = document.getElementById('new-task-input');
   if (!input) return;
   input.addEventListener('keydown', e => { if (e.key === 'Enter') addTask(); });
-  if (localStorage.getItem('tasks-minimised')) setMinimised(true);
+  document.getElementById('add-task-btn').addEventListener('click', addTask);
+  document.getElementById('task-list').addEventListener('click', e => {
+    const btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    const id = parseInt(btn.closest('.task-item').dataset.id);
+    if (btn.dataset.action === 'edit') startEdit(id);
+    if (btn.dataset.action === 'delete') deleteTask(id);
+  });
   loadTasks();
 }
 
 // ── Map ─────────────────────────────────────────────
-let map = null;
+window.map = null;
 
 function initMap() {
-  map = L.map('map-container').setView([51.505, -0.09], 13);
+  window.map = L.map('map-container').setView([51.505, -0.09], 13);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
     attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
     subdomains: 'abcd',
     maxZoom: 20,
-  }).addTo(map);
-}
-
-function goToCoordinates(lat, lng, zoom = 14) {
-  if (!map) return;
-  map.flyTo([lat, lng], zoom);
-}
-
-function dropPin(lat, lng, label = '') {
-  if (!map) return;
-  const marker = L.marker([lat, lng]).addTo(map);
-  if (label) marker.bindPopup(label).openPopup();
-  return marker;
+  }).addTo(window.map);
 }
 
 document.addEventListener('htmx:afterSwap', () => {
   if (document.getElementById('task-list')) initTaskPanel();
-  if (document.getElementById('map-container')) { map = null; initMap(); }
-  else map = null;
+  if (document.getElementById('map-container')) { window.map = null; initMap(); }
+  else window.map = null;
 });
 
 initTaskPanel();
@@ -781,128 +258,12 @@ function attachDragEvents(item) {
   });
 }
 
-// ── Conversations ───────────────────────────────────
-let conversations = [];
-let currentConversationId = null;
+// ── Relay interface ─────────────────────────────────
+// These functions are called by relay tool callbacks in the module below.
+window.appendToConsole = appendToConsole;
+window.loadTasks = loadTasks;
+window.setDark = setDark;
 
-async function loadConversations() {
-  const data = await api('/api/conversations/');
-  conversations = data.conversations;
-  renderConversations();
-}
-
-function renderConversations() {
-  const list = document.getElementById('convos-list');
-  list.innerHTML = '';
-  conversations.forEach(c => {
-    const item = document.createElement('div');
-    item.className = 'convo-item' + (c.id === currentConversationId ? ' active' : '');
-    item.dataset.id = c.id;
-    item.textContent = c.title;
-    item.title = c.title;
-    item.onclick = () => selectConversation(c.id);
-    list.appendChild(item);
-  });
-}
-
-async function selectConversation(id) {
-  currentConversationId = id;
-  renderConversations();
-  const data = await api(`/api/conversations/${id}/messages/`);
-  const msgs = document.getElementById('chat-messages');
-  msgs.innerHTML = '';
-  data.messages.forEach(m => appendMessage(m.role, m.content));
-}
-
-function newConversation() {
-  currentConversationId = null;
-  document.getElementById('chat-messages').innerHTML = '';
-  renderConversations();
-  document.getElementById('chat-input').focus();
-}
-
-// ── Chat ───────────────────────────────────────────
-function appendMessage(role, text) {
-  const div = document.createElement('div');
-  div.className = `message ${role}`;
-  div.textContent = text;
-  document.getElementById('chat-messages').appendChild(div);
-  scrollChat();
-  return div;
-}
-
-function scrollChat() {
-  const msgs = document.getElementById('chat-messages');
-  msgs.scrollTop = msgs.scrollHeight;
-}
-
-async function sendMessage() {
-  const input = document.getElementById('chat-input');
-  const btn = document.getElementById('send-btn');
-  const message = input.value.trim();
-  if (!message || btn.disabled) return;
-
-  input.value = '';
-  btn.disabled = true;
-
-  appendMessage('user', message);
-  const assistantDiv = appendMessage('assistant', '');
-
-  try {
-    const body = { message };
-    if (currentConversationId) body.conversation_id = currentConversationId;
-
-    const response = await fetch('/api/chat/', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
-      body: JSON.stringify(body),
-    });
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop();
-
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue;
-        const payload = line.slice(6);
-        if (payload === '[DONE]') break;
-        try {
-          const data = JSON.parse(payload);
-          if (data.conversation_id) {
-            currentConversationId = data.conversation_id;
-          }
-          if (data.text) {
-            assistantDiv.textContent += data.text;
-            scrollChat();
-          }
-        } catch (_) {}
-      }
-    }
-  } catch (err) {
-    assistantDiv.textContent = 'Error: ' + err.message;
-  }
-
-  btn.disabled = false;
-  input.focus();
-  await loadConversations();
-}
-
-document.getElementById('chat-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    sendMessage();
-  }
-});
-
-// ── Init ───────────────────────────────────────────
-loadConversations();
 </script>
 
 <script type="module">
@@ -942,14 +303,6 @@ relay
     fn: async () => { await loadTasks() }
   })
   .register({
-    name: 'set_task_panel_minimised',
-    description: 'Minimise or expand the task panel on the left side of the screen.',
-    params: {
-      minimised: { type: 'boolean', description: 'true to minimise the panel, false to expand it' }
-    },
-    fn: ({ minimised }) => setMinimised(minimised)
-  })
-  .register({
     name: 'set_dark_mode',
     description: 'Switch the UI between dark and light mode.',
     params: {
@@ -965,7 +318,9 @@ relay
       lng:  { type: 'number', description: 'Longitude' },
       zoom: { type: 'number', description: 'Zoom level 1–19 (default 14)' },
     },
-    fn: ({ lat, lng, zoom = 14 }) => goToCoordinates(lat, lng, zoom)
+    fn: ({ lat, lng, zoom = 14 }) => {
+      map.flyTo([lat, lng], zoom);
+    }
   })
   .register({
     name: 'drop_pin',
@@ -975,9 +330,14 @@ relay
       lng:   { type: 'number', description: 'Longitude' },
       label: { type: 'string', description: 'Popup label shown on the pin (optional)' },
     },
-    fn: ({ lat, lng, label = '' }) => dropPin(lat, lng, label)
+    fn: ({ lat, lng, label = '' }) => {
+      if (!map) return;
+      const marker = L.marker([lat, lng]).addTo(map);
+      if (label) marker.bindPopup(label).openPopup();
+      map.flyTo([lat, lng], 14);
+      return marker;
+    }
   })
   .connect()
 </script>
-</body>
-</html>
+{% endblock %}
