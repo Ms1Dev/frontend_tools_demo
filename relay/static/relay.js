@@ -5,6 +5,21 @@ export class Relay {
     this._channel = new BroadcastChannel('relay')
   }
 
+  // Register HTMX triggers as a built-in tool
+  registerHtmxTriggers(triggers) {
+    return this.register({
+      name: 'htmx_trigger',
+      description: `Fire an HTMX action by name. Available triggers: ${triggers.map(t => `"${t.name}" — ${t.description}`).join('; ')}`,
+      params: {
+        trigger: { type: 'string', description: `Trigger name. One of: ${triggers.map(t => t.name).join(', ')}` }
+      },
+      fn: ({ trigger }) => {
+        const el = document.querySelector(`[data-trigger="${trigger}"]`)
+        if (el) el.dispatchEvent(new Event(trigger))
+      }
+    })
+  }
+
   // Register a JS function as an LLM-callable tool
   register({ name, description, params, fn }) {
     this._tools.set(name, { name, description, params, fn })
@@ -54,10 +69,6 @@ export class Relay {
           this._channel.postMessage({ _type: type, _data })
         })
       })
-
-      es.onopen = () => {
-        console.log("SSE connection opened");
-      }
 
       es.onerror = () => {
         es.close()

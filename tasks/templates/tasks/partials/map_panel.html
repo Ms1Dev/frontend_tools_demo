@@ -1,10 +1,10 @@
 <div class="panel" id="map-panel">
-  <div class="panel-header">
-    <span>Map</span>
-    <button class="btn-icon" title="Switch to tasks"
+  <div class="panel-tabs">
+    <button class="tab"
             hx-get="/panels/tasks/" hx-target="#map-panel" hx-swap="outerHTML"
             hx-trigger="click, swap-to-tasks"
             data-trigger="swap-to-tasks">Tasks</button>
+    <button class="tab active">Map</button>
   </div>
   <div id="map-container" style="flex:1; min-height:0;"></div>
 </div>

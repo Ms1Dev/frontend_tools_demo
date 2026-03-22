@@ -269,25 +269,13 @@ window.setDark = setDark;
 <script type="module">
 import { Relay } from '/static/relay.js'
 
-const HTMX_TRIGGERS = [
-  { name: 'swap-to-map',   description: 'Switch the left panel from tasks to the map view' },
-  { name: 'swap-to-tasks', description: 'Switch the left panel from map back to the task list' },
-]
-
 const relay = new Relay()
 
 relay
-  .register({
-    name: 'htmx_trigger',
-    description: `Fire an HTMX action by name. Available triggers: ${HTMX_TRIGGERS.map(t => `"${t.name}" — ${t.description}`).join('; ')}`,
-    params: {
-      trigger: { type: 'string', description: `Trigger name. One of: ${HTMX_TRIGGERS.map(t => t.name).join(', ')}` }
-    },
-    fn: ({ trigger }) => {
-      const el = document.querySelector(`[data-trigger="${trigger}"]`)
-      if (el) el.dispatchEvent(new Event(trigger))
-    }
-  })
+  .registerHtmxTriggers([
+    { name: 'swap-to-map',   description: 'Switch the left panel from tasks to the map view' },
+    { name: 'swap-to-tasks', description: 'Switch the left panel from map back to the task list' },
+  ])
   .register({
     name: 'log',
     description: 'Output a message to the console panel. Use this to show your reasoning, progress, or any notes while working.',

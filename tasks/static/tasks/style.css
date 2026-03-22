@@ -44,17 +44,29 @@ body {
   flex: 1;
 }
 
-.panel-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid #e5e7eb;
-  font-size: 15px;
-  font-weight: 600;
-  color: #111827;
-  flex-shrink: 0;
+.panel-tabs {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
 }
+
+.tab {
+  flex: 1;
+  padding: 11px 0;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-size: 13px;
+  font-weight: 500;
+  color: #9ca3af;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.15s, border-color 0.15s;
+  margin-bottom: -1px;
+}
+
+.tab:hover { color: #374151; }
+.tab.active { color: #6366f1; border-bottom-color: #6366f1; cursor: default; }
 
 /* ── Task list ─────────────────────────── */
 .task-panel {
@@ -301,10 +313,10 @@ body.dark .panel {
   box-shadow: 0 1px 4px rgba(0,0,0,0.4);
 }
 
-body.dark .panel-header {
-  border-color: #2e3147;
-  color: #e5e7eb;
-}
+body.dark .panel-tabs { border-color: #2e3147; }
+body.dark .tab { color: #4b5268; }
+body.dark .tab:hover { color: #9ca3af; }
+body.dark .tab.active { color: #818cf8; border-bottom-color: #818cf8; }
 
 body.dark .task-add {
   border-color: #2e3147;

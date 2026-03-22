@@ -7,6 +7,7 @@ from openai import OpenAI
 from .tools import TOOLS, execute_tool
 from relay import registry as relay_registry
 
+MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 _client = None
 
 
@@ -47,7 +48,7 @@ def stream_response(history: list[dict]) -> Generator[str, None, str]:
     while True:
         all_tools = _all_tools()
         stream = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=MODEL,
             messages=messages,
             stream=True,
             **({"tools": all_tools} if all_tools else {}),
