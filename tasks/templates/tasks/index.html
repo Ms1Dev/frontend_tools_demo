@@ -5,6 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tasks</title>
+  <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -499,17 +500,7 @@
 <div class="app">
 
   <!-- ── Task list ──────────────────────────────── -->
-  <div class="panel task-panel" id="task-panel">
-    <div class="panel-header">
-      <span id="task-panel-title">Tasks</span>
-      <button class="btn-icon" id="minimise-btn" title="Minimise" onclick="toggleMinimise()">◀</button>
-    </div>
-    <div class="task-add">
-      <input type="text" id="new-task-input" placeholder="Add a task…" autocomplete="off">
-      <button class="btn btn-primary" onclick="addTask()">Add</button>
-    </div>
-    <div class="task-list" id="task-list"></div>
-  </div>
+  {% include "tasks/partials/task_panel.html" %}
 
   <!-- ── Chat ──────────────────────────────────── -->
   <div class="panel chat-panel">
@@ -674,9 +665,19 @@ async function addTask() {
   input.value = '';
 }
 
-document.getElementById('new-task-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter') addTask();
+function initTaskPanel() {
+  const input = document.getElementById('new-task-input');
+  if (!input) return;
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') addTask(); });
+  if (localStorage.getItem('tasks-minimised')) setMinimised(true);
+  loadTasks();
+}
+
+document.addEventListener('htmx:afterSwap', (e) => {
+  if (document.getElementById('task-list')) initTaskPanel();
 });
+
+initTaskPanel();
 
 function startEdit(id) {
   const item = document.querySelector(`.task-item[data-id="${id}"]`);
@@ -873,16 +874,31 @@ document.getElementById('chat-input').addEventListener('keydown', e => {
 });
 
 // ── Init ───────────────────────────────────────────
-loadTasks();
 loadConversations();
 </script>
 
 <script type="module">
 import { Relay } from '/static/relay.js'
 
+const HTMX_TRIGGERS = [
+  { name: 'swap-to-map',   description: 'Switch the left panel from tasks to the map view' },
+  { name: 'swap-to-tasks', description: 'Switch the left panel from map back to the task list' },
+]
+
 const relay = new Relay()
 
 relay
+  .register({
+    name: 'htmx_trigger',
+    description: `Fire an HTMX action by name. Available triggers: ${HTMX_TRIGGERS.map(t => `"${t.name}" — ${t.description}`).join('; ')}`,
+    params: {
+      trigger: { type: 'string', description: `Trigger name. One of: ${HTMX_TRIGGERS.map(t => t.name).join(', ')}` }
+    },
+    fn: ({ trigger }) => {
+      const el = document.querySelector(`[data-trigger="${trigger}"]`)
+      if (el) el.dispatchEvent(new Event(trigger))
+    }
+  })
   .register({
     name: 'log',
     description: 'Output a message to the console panel. Use this to show your reasoning, progress, or any notes while working.',

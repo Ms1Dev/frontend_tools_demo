@@ -3,6 +3,8 @@ from . import views
 
 urlpatterns = [
     path('', views.index, name='index'),
+    path('panels/tasks/', views.panel_tasks, name='panel-tasks'),
+    path('panels/map/', views.panel_map, name='panel-map'),
     path('api/tasks/', views.task_list, name='task-list'),
     path('api/tasks/add/', views.task_add, name='task-add'),
     path('api/tasks/<int:task_id>/edit/', views.task_edit, name='task-edit'),

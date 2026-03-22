@@ -11,6 +11,14 @@ def index(request):
     return render(request, 'tasks/index.html')
 
 
+def panel_tasks(request):
+    return render(request, 'tasks/partials/task_panel.html')
+
+
+def panel_map(request):
+    return render(request, 'tasks/partials/map_panel.html')
+
+
 def task_list(request):
     tasks = list(Task.objects.values('id', 'title', 'order'))
     return JsonResponse({'tasks': tasks})
