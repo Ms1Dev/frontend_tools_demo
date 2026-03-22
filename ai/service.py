@@ -27,13 +27,21 @@ def _execute(name: str, arguments: dict) -> str:
     return execute_tool(name, arguments)
 
 
+SYSTEM_PROMPT = """You are a helpful assistant with access to a task management app.
+
+When working through a request, use the `log` tool to narrate your thinking — what you're about to do, decisions you're making, and results of actions. Keep log messages short and clear.
+
+To manage tasks use: list_tasks, add_task, delete_task.
+After any add or delete, always call refresh_task_list so the UI updates."""
+
+
 def stream_response(history: list[dict]) -> Generator[str, None, str]:
     """Stream an LLM response, handling tool calls transparently.
 
     Yields text chunks as they arrive and returns the full assembled response.
     """
     client = get_client()
-    messages = list(history)
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}] + list(history)
     full_response = []
 
     while True:
