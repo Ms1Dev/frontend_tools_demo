@@ -68,7 +68,7 @@ async function sendMessage() {
   const assistantDiv = appendMessage('assistant', '');
 
   try {
-    const body = { message };
+    const body = { message, tools: window._relay?.getSchemas() ?? [] };
     if (currentConversationId) body.conversation_id = currentConversationId;
 
     const response = await fetch('/api/chat/', {

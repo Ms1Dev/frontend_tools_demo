@@ -1,19 +1,18 @@
 import json
 
 from django.http import StreamingHttpResponse
-from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from tasks.models import Conversation, Message
 from .service import stream_response
 
 
-@csrf_exempt
 @require_POST
 def chat(request):
     data = json.loads(request.body)
     message_text = data.get("message", "")
     conversation_id = data.get("conversation_id")
+    frontend_tools = data.get("tools", [])
 
     if conversation_id:
         try:
@@ -38,7 +37,7 @@ def chat(request):
         yield f"data: {json.dumps({'conversation_id': conversation.id})}\n\n"
 
         full_response = []
-        for text in stream_response(history):
+        for text in stream_response(history, frontend_tools):
             full_response.append(text)
             yield f"data: {json.dumps({'text': text})}\n\n"
 

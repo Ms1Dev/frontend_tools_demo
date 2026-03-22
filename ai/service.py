@@ -4,8 +4,8 @@ from typing import Generator
 
 from openai import OpenAI
 
+from relay.events import publish
 from .tools import TOOLS, execute_tool
-from relay import registry as relay_registry
 
 MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 _client = None
@@ -18,13 +18,31 @@ def get_client() -> OpenAI:
     return _client
 
 
-def _all_tools() -> list[dict]:
-    return TOOLS + relay_registry.to_openai_tools()
+def _to_openai(tools: list[dict]) -> list[dict]:
+    return [
+        {
+            "type": "function",
+            "function": {
+                "name": t["name"],
+                "description": t["description"],
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        k: {"type": v["type"], "description": v.get("description", "")}
+                        for k, v in t.get("params", {}).items()
+                    },
+                    "required": list(t.get("params", {}).keys()),
+                },
+            },
+        }
+        for t in tools
+    ]
 
 
-def _execute(name: str, arguments: dict) -> str:
-    if relay_registry.is_frontend_tool(name):
-        return relay_registry.execute(name, arguments)
+def _execute(name: str, arguments: dict, frontend_tool_names: set[str]) -> str:
+    if name in frontend_tool_names:
+        publish({"type": "tool_call", "tool": name, "args": arguments})
+        return json.dumps({"status": "dispatched"})
     return execute_tool(name, arguments)
 
 
@@ -36,17 +54,18 @@ To manage tasks use: list_tasks, add_task, delete_task.
 After any add or delete, always call refresh_task_list so the UI updates."""
 
 
-def stream_response(history: list[dict]) -> Generator[str, None, str]:
+def stream_response(history: list[dict], frontend_tools: list[dict]) -> Generator[str, None, str]:
     """Stream an LLM response, handling tool calls transparently.
 
     Yields text chunks as they arrive and returns the full assembled response.
     """
     client = get_client()
     messages = [{"role": "system", "content": SYSTEM_PROMPT}] + list(history)
+    all_tools = TOOLS + _to_openai(frontend_tools)
+    frontend_tool_names = {t["name"] for t in frontend_tools}
     full_response = []
 
     while True:
-        all_tools = _all_tools()
         stream = client.chat.completions.create(
             model=MODEL,
             messages=messages,
@@ -92,7 +111,7 @@ def stream_response(history: list[dict]) -> Generator[str, None, str]:
         })
 
         for tc in tool_calls.values():
-            result = _execute(tc["name"], json.loads(tc["arguments"]))
+            result = _execute(tc["name"], json.loads(tc["arguments"]), frontend_tool_names)
             messages.append({
                 "role": "tool",
                 "tool_call_id": tc["id"],
