@@ -553,9 +553,28 @@ document.getElementById('chat-input').addEventListener('keydown', e => {
   }
 });
 
+// ── Server-sent events ─────────────────────────────
+function connectEvents() {
+  const es = new EventSource('/api/events/');
+
+  es.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+    if (data.type === 'task_created') {
+      tasks.push(data.task);
+      renderTasks();
+    }
+  };
+
+  es.onerror = () => {
+    es.close();
+    setTimeout(connectEvents, 3000);
+  };
+}
+
 // ── Init ───────────────────────────────────────────
 loadTasks();
 loadConversations();
+connectEvents();
 </script>
 </body>
 </html>
