@@ -564,10 +564,30 @@ import { Relay } from '/static/relay.js'
 const relay = new Relay()
 
 relay
-  .on('task_created', ({ task }) => {
-    tasks.push(task);
-    console.log("test");
-    renderTasks();
+  .register({
+    name: 'add_task',
+    description: 'Add a new task to the task list',
+    params: {
+      title: { type: 'string', description: 'The title of the task' }
+    },
+    fn: async ({ title }) => {
+      console.log('add_task', title);
+      const task = await api('/api/tasks/add/', 'POST', { title })
+      if (!task.error) { tasks.push(task); renderTasks() }
+    }
+  })
+  .register({
+    name: 'delete_task',
+    description: 'Delete a task by its ID',
+    params: {
+      id: { type: 'number', description: 'The ID of the task to delete' }
+    },
+    fn: async ({ id }) => {
+      await api(`/api/tasks/${id}/delete/`, 'POST')
+      tasks = tasks.filter(t => t.id !== id)
+      console.log('delete_task', id);
+      renderTasks()
+    }
   })
   .connect()
 </script>
