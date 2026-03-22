@@ -6,6 +6,7 @@ from openai import OpenAI
 
 from relay.events import publish
 from .tools import TOOLS, execute_tool
+from .frontend_tools import FRONTEND_TOOLS, FRONTEND_TOOL_NAMES
 
 MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 _client = None
@@ -39,8 +40,8 @@ def _to_openai(tools: list[dict]) -> list[dict]:
     ]
 
 
-def _execute(name: str, arguments: dict, frontend_tool_names: set[str]) -> str:
-    if name in frontend_tool_names:
+def _execute(name: str, arguments: dict) -> str:
+    if name in FRONTEND_TOOL_NAMES:
         publish({"type": "tool_call", "tool": name, "args": arguments})
         return json.dumps({"status": "dispatched"})
     return execute_tool(name, arguments)
@@ -54,15 +55,14 @@ To manage notes use: list_notes, add_note, delete_note.
 After any add or delete, always call refresh_note_list so the UI updates."""
 
 
-def stream_response(history: list[dict], frontend_tools: list[dict]) -> Generator[str, None, str]:
+def stream_response(history: list[dict]) -> Generator[str, None, str]:
     """Stream an LLM response, handling tool calls transparently.
 
     Yields text chunks as they arrive and returns the full assembled response.
     """
     client = get_client()
     messages = [{"role": "system", "content": SYSTEM_PROMPT}] + list(history)
-    all_tools = TOOLS + _to_openai(frontend_tools)
-    frontend_tool_names = {t["name"] for t in frontend_tools}
+    all_tools = TOOLS + _to_openai(FRONTEND_TOOLS)
     full_response = []
 
     while True:
@@ -111,7 +111,7 @@ def stream_response(history: list[dict], frontend_tools: list[dict]) -> Generato
         })
 
         for tc in tool_calls.values():
-            result = _execute(tc["name"], json.loads(tc["arguments"]), frontend_tool_names)
+            result = _execute(tc["name"], json.loads(tc["arguments"]))
             messages.append({
                 "role": "tool",
                 "tool_call_id": tc["id"],

@@ -12,7 +12,6 @@ def chat(request):
     data = json.loads(request.body)
     message_text = data.get("message", "")
     conversation_id = data.get("conversation_id")
-    frontend_tools = data.get("tools", [])
 
     if conversation_id:
         try:
@@ -37,7 +36,7 @@ def chat(request):
         yield f"data: {json.dumps({'conversation_id': conversation.id})}\n\n"
 
         full_response = []
-        for text in stream_response(history, frontend_tools):
+        for text in stream_response(history):
             full_response.append(text)
             yield f"data: {json.dumps({'text': text})}\n\n"
 

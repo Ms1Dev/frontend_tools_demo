@@ -219,64 +219,24 @@ async function deleteNote(id) {
 
 // ── Relay ────────────────────────────────────────────
 //
-// Tools are registered here. On each message, schemas
-// (name, description, params) are sent to the LLM so
-// it knows what it can call. The fn stays in the
-// browser and runs when the LLM calls the tool.
-//
-// When the LLM calls one of these tools it transmits the
-// name and arguments to the browser using SSE.
-// The browser receives the event and executes the fn.
-// (see relay/static/relay.js)
+// Tool schemas are defined server-side in ai/frontend_tools.py.
+// Here we register the browser-side handlers that run when
+// the LLM calls one of those tools. The server dispatches
+// the call via SSE; the relay receives it and calls the
+// matching handler.
 //
 // ─────────────────────────────────────────────────────
 window._relay = new Relay()
-  .registerHtmxTriggers([
-    { name: 'swap-to-map',   description: 'Switch the left panel to the map view' },
-    { name: 'swap-to-notes', description: 'Switch the left panel back to the note list' },
-  ])
-  .register({
-    name: 'log',
-    description: 'Output a short message to the developer console panel in the UI. Use this to narrate what you are doing.',
-    params: { message: { type: 'string', description: 'Message to display in the console' } },
-    fn: ({ message }) => appendToConsole(message),
-  })
-  .register({
-    name: 'refresh_note_list',
-    description: 'Reload the note list from the server so the UI reflects the latest data. Call this after any add or delete.',
-    params: {},
-    fn: () => loadNotes(),
-  })
-  .register({
-    name: 'set_dark_mode',
-    description: 'Enable or disable dark mode.',
-    params: { dark: { type: 'boolean', description: 'True to enable dark mode, false to disable' } },
-    fn: ({ dark }) => setDark(dark),
-  })
-  .register({
-    name: 'go_to_coordinates',
-    description: 'Pan and zoom the map to a specific location.',
-    params: {
-      lat:  { type: 'number', description: 'Latitude' },
-      lng:  { type: 'number', description: 'Longitude' },
-      zoom: { type: 'number', description: 'Zoom level (default 14)' },
-    },
-    fn: ({ lat, lng, zoom = 14 }) => map?.flyTo([lat, lng], zoom),
-  })
-  .register({
-    name: 'drop_pin',
-    description: 'Drop a marker on the map at a given location with an optional label.',
-    params: {
-      lat:   { type: 'number', description: 'Latitude' },
-      lng:   { type: 'number', description: 'Longitude' },
-      label: { type: 'string', description: 'Popup label shown on the marker (optional)' },
-    },
-    fn: ({ lat, lng, label = '' }) => {
-      if (!map) return
-      const marker = L.marker([lat, lng]).addTo(map)
-      if (label) marker.bindPopup(label).openPopup()
-      map.flyTo([lat, lng], 14)
-    },
+  .registerHtmxTriggers()
+  .on('log',               ({ message })           => appendToConsole(message))
+  .on('refresh_note_list', ()                      => loadNotes())
+  .on('set_dark_mode',     ({ dark })              => setDark(dark))
+  .on('go_to_coordinates', ({ lat, lng, zoom=14 }) => map?.flyTo([lat, lng], zoom))
+  .on('drop_pin', ({ lat, lng, label='' }) => {
+    if (!map) return
+    const marker = L.marker([lat, lng]).addTo(map)
+    if (label) marker.bindPopup(label).openPopup()
+    map.flyTo([lat, lng], 14)
   })
   .connect()
 
