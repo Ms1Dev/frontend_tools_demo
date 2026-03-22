@@ -1,6 +1,6 @@
 # LLM Notes App Demo
 
-A Django app that gives an LLM tools front end tooling so it can update the UI.
+A proof-of-concept Django app that gives an LLM front end tooling so it can update the UI.
 
 When the LLM calls a browser tool, the server publishes it as an SSE event. One browser tab holds the SSE connection (coordinated via `navigator.locks` so multiple tabs don't compete), and forwards events to other tabs via `BroadcastChannel`.
 

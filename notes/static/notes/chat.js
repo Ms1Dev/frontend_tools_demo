@@ -99,7 +99,7 @@ async function sendMessage() {
             assistantDiv.textContent += data.text;
             scrollChat();
           }
-        } catch (_) {}
+        } catch (e) { console.warn('SSE parse error:', e); }
       }
     }
   } catch (err) {

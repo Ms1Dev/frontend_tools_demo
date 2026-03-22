@@ -1,5 +1,5 @@
 // ── CSRF ────────────────────────────────────────────
-export const CSRF = document.querySelector('[name=csrfmiddlewaretoken]').value;
+export const CSRF = document.querySelector('[name=csrfmiddlewaretoken]')?.value ?? '';
 
 export function api(url, method = 'GET', body = null) {
   const opts = {

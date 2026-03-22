@@ -90,7 +90,11 @@ def stream_response(history: list[dict]) -> Generator[str, None, str]:
         })
 
         for tc in tool_calls.values():
-            result = _execute(tc["name"], json.loads(tc["arguments"]))
+            try:
+                arguments = json.loads(tc["arguments"])
+            except json.JSONDecodeError:
+                arguments = {}
+            result = _execute(tc["name"], arguments)
             messages.append({
                 "role": "tool",
                 "tool_call_id": tc["id"],

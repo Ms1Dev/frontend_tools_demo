@@ -9,7 +9,11 @@ from .service import stream_response
 
 @require_POST
 def chat(request):
-    data = json.loads(request.body)
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        from django.http import JsonResponse
+        return JsonResponse({"error": "invalid JSON"}, status=400)
     message_text = data.get("message", "")
     conversation_id = data.get("conversation_id")
 
