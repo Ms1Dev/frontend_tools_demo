@@ -5,5 +5,5 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("", include("tasks.urls")),
     path("", include("ai.urls")),
-    path("", include("frontcall.urls")),
+    path("", include("relay.urls")),
 ]

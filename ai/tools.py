@@ -1,7 +1,7 @@
 import json
 
 from tasks.models import Task
-from frontcall.events import publish
+from relay.events import publish
 
 TOOLS = [
     {

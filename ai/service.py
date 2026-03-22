@@ -5,6 +5,7 @@ from typing import Generator
 from openai import OpenAI
 
 from .tools import TOOLS, execute_tool
+from relay import registry as relay_registry
 
 _client = None
 
@@ -14,6 +15,16 @@ def get_client() -> OpenAI:
     if _client is None:
         _client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
     return _client
+
+
+def _all_tools() -> list[dict]:
+    return TOOLS + relay_registry.to_openai_tools()
+
+
+def _execute(name: str, arguments: dict) -> str:
+    if relay_registry.is_frontend_tool(name):
+        return relay_registry.execute(name, arguments)
+    return execute_tool(name, arguments)
 
 
 def stream_response(history: list[dict]) -> Generator[str, None, str]:
@@ -26,16 +37,16 @@ def stream_response(history: list[dict]) -> Generator[str, None, str]:
     full_response = []
 
     while True:
+        all_tools = _all_tools()
         stream = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=messages,
-            tools=TOOLS,
             stream=True,
+            **({"tools": all_tools} if all_tools else {}),
         )
 
-        # Accumulate this turn's text and tool calls
         text_chunks: list[str] = []
-        tool_calls: dict[int, dict] = {}  # index -> {id, name, arguments}
+        tool_calls: dict[int, dict] = {}
         finish_reason = None
 
         for chunk in stream:
@@ -58,7 +69,6 @@ def stream_response(history: list[dict]) -> Generator[str, None, str]:
         if finish_reason != "tool_calls":
             break
 
-        # Append the assistant turn (with tool_calls) to history
         messages.append({
             "role": "assistant",
             "content": "".join(text_chunks) or None,
@@ -72,9 +82,8 @@ def stream_response(history: list[dict]) -> Generator[str, None, str]:
             ],
         })
 
-        # Execute each tool and append results
         for tc in tool_calls.values():
-            result = execute_tool(tc["name"], json.loads(tc["arguments"]))
+            result = _execute(tc["name"], json.loads(tc["arguments"]))
             messages.append({
                 "role": "tool",
                 "tool_call_id": tc["id"],
