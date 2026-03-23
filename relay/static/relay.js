@@ -34,6 +34,8 @@ export class Relay {
     // navigator.locks ensures only one tab holds the SSE connection
     navigator.locks.request('relay_lock', () => {
       const es = new EventSource('/api/events/')
+      let release
+      const held = new Promise((resolve) => { release = resolve })
 
       es.addEventListener('tool_call', (event) => {
         const data = JSON.parse(event.data)
@@ -45,11 +47,18 @@ export class Relay {
 
       es.onerror = () => {
         es.close()
+        // Release the lock before retrying. Without this, the tab holds the
+        // lock forever while also queuing a new request for it, deadlocking
+        // all other tabs that try to open.
+        release()
         setTimeout(() => this._startSSE(), 3000)
       }
 
-      // Hold the lock for the lifetime of this tab
-      return new Promise(() => {})
+      // Close the SSE connection on unload so the server frees the thread immediately.
+      // The browser releases the lock naturally when the tab is gone.
+      window.addEventListener('beforeunload', () => es.close())
+
+      return held
     })
 
     // Other tabs receive via BroadcastChannel

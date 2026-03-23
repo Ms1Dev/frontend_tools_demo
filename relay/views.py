@@ -15,7 +15,7 @@ def events(request):
             yield "event: connected\ndata: {}\n\n"
             while True:
                 try:
-                    event = q.get(timeout=25)
+                    event = q.get(timeout=5)
                     event_type = event.get("type", "message")
                     yield f"event: {event_type}\ndata: {json.dumps(event)}\n\n"
                 except Empty:
