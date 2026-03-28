@@ -20,8 +20,32 @@ FRONTEND_TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "open_console",
+            "description": "Open the LLM console panel so the user can see log output. Use close_console to hide it.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "close_console",
+            "description": "Close the LLM console panel.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "log",
-            "description": "Output a short message to the developer console panel in the UI. Use this to narrate what you are doing.",
+            "description": "Output a short message to the developer console panel in the UI. Use this to report completed actions and their outcomes — not as a replacement for calling action tools.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -54,22 +78,6 @@ FRONTEND_TOOLS = [
                     "dark": {"type": "boolean", "description": "True to enable dark mode, false to disable"},
                 },
                 "required": ["dark"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "go_to_coordinates",
-            "description": "Pan and zoom the map to a specific location.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "lat":  {"type": "number", "description": "Latitude"},
-                    "lng":  {"type": "number", "description": "Longitude"},
-                    "zoom": {"type": "number", "description": "Zoom level (default 14)"},
-                },
-                "required": ["lat", "lng"],
             },
         },
     },

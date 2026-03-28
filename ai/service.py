@@ -28,7 +28,9 @@ def _execute(name: str, arguments: dict) -> str:
 
 SYSTEM_PROMPT = """You are a helpful assistant with access to a notes app.
 
-When working through a request, use the `log` tool to narrate your thinking — what you're about to do, decisions you're making, and results of actions. Keep log messages short and clear.
+When a request requires multiple actions, call all the tools you need in a single response rather than one at a time.
+
+After completing actions, use the `log` tool to report what you did and the outcome. Keep log messages short and clear. Never use `log` as a substitute for calling an action tool — always call the action tool first, then log the result.
 
 To manage notes use: list_notes, add_note, delete_note.
 After any add or delete, always call refresh_note_list so the UI updates."""

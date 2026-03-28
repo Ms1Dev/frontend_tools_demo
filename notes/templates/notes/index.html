@@ -168,6 +168,17 @@
 
   // ── Map ─────────────────────────────────────────────
   let map = null;
+  let pendingPins = [];
+
+  function dropPin({ lat, lng, label = "" }) {
+    if (!map) {
+      pendingPins.push({ lat, lng, label });
+      return;
+    }
+    const marker = L.marker([lat, lng]).addTo(map);
+    if (label) marker.bindPopup(label).openPopup();
+    map.flyTo([lat, lng], 14);
+  }
 
   function initMap() {
     map = L.map("map-container").setView([51.505, -0.09], 13);
@@ -180,6 +191,8 @@
         maxZoom: 20,
       },
     ).addTo(map);
+    pendingPins.forEach(dropPin);
+    pendingPins = [];
   }
 
   document.addEventListener("htmx:afterSwap", () => {
@@ -246,18 +259,19 @@
   // ─────────────────────────────────────────────────────
   window._relay = new Relay()
     .registerHtmxTriggers()
+    .on("open_console", () => {
+      if (document.getElementById("console-panel").classList.contains("collapsed")) toggleConsole();
+    })
+    .on("close_console", () => {
+      if (!document.getElementById("console-panel").classList.contains("collapsed")) toggleConsole();
+    })
     .on("log", ({ message }) => appendToConsole(message))
     .on("refresh_note_list", () => loadNotes())
     .on("set_dark_mode", ({ dark }) => setDark(dark))
     .on("go_to_coordinates", ({ lat, lng, zoom = 14 }) =>
       map?.flyTo([lat, lng], zoom),
     )
-    .on("drop_pin", ({ lat, lng, label = "" }) => {
-      if (!map) return;
-      const marker = L.marker([lat, lng]).addTo(map);
-      if (label) marker.bindPopup(label).openPopup();
-      map.flyTo([lat, lng], 14);
-    })
+    .on("drop_pin", (args) => dropPin(args))
     .connect();
 </script>
 {% endblock %}
